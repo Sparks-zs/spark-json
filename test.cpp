@@ -6,7 +6,7 @@ static int test_count = 0;
 static int test_pass = 0;
 static int main_ret = 0; 
 
-#define EXPECT_EQ_BASE(equality, expect, actual, format) \
+#define EXPECT_EQ_BASE(equality, expect, actual) \
     do {\
         test_count++; \
         if(equality) \
@@ -17,13 +17,13 @@ static int main_ret = 0;
         }\
     }while(0)
 
-#define EXPECT_EQ_INT(expect, actual) EXPECT_EQ_BASE((expect == actual), expect, actual, "%d")
-#define EXPECT_EQ_DOUBLE(expect, actual) EXPECT_EQ_BASE((expect == actual), expect, actual, "%.17g")
+#define EXPECT_EQ_INT(expect, actual) EXPECT_EQ_BASE((expect == actual), expect, actual)
+#define EXPECT_EQ_DOUBLE(expect, actual) EXPECT_EQ_BASE((expect == actual), expect, actual)
 #define EXPECT_EQ_STRING(expect, actual) \
-    EXPECT_EQ_BASE(expect.compare(actual) == 0, expect, actual, "%s")
-#define EXPECT_TRUE(actual) EXPECT_EQ_BASE((actual) != 0, "true", "false", "%s")
-#define EXPECT_FALSE(actual) EXPECT_EQ_BASE((actual) == 0, "false", "true", "%s")
-#define EXPECT_EQ_SIZE_T(expect, actual) EXPECT_EQ_BASE((expect) == (actual), (size_t)expect, (size_t)actual, "%zu")
+    EXPECT_EQ_BASE(expect.compare(actual) == 0, expect, actual)
+#define EXPECT_TRUE(actual) EXPECT_EQ_BASE((actual) != 0, "true", "false")
+#define EXPECT_FALSE(actual) EXPECT_EQ_BASE((actual) == 0, "false", "true")
+#define EXPECT_EQ_SIZE_T(expect, actual) EXPECT_EQ_BASE((expect) == (actual), (size_t)expect, (size_t)actual)
 
 #define TEST_PARSE_JSON(json, json_type, code) \
     do{ \
@@ -214,6 +214,14 @@ void test_array(){
             EXPECT_EQ_INT(json[i][j].to_int(), j);
         }
     }
+
+    json = Json::object {
+        {"key1", 15.7},
+        {"key2", Json::object {{ "key3", "string"}} },
+        {"key4", Json::array { 0, 1, 2, 3}}
+    };
+
+    std::cout << json.dump() << std::endl;
 }
 
 void test_object(){

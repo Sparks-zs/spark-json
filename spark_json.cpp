@@ -1,40 +1,102 @@
 #include "spark_json.hpp"
 #include <assert.h>
+#include <cmath>
 
 using namespace std;
 
 namespace SparkJson
 {
-    const Json& JsonValue::operator[](size_t i) const{
-        return Json();
+    struct Null{
+        bool operator==(Null&) const { return true; }
+        bool operator<(Null&) const { return false; }
+    };
+
+    static void dump(Null, string& out){
+        out += "null";
     }
 
-    const Json& JsonValue::operator[](const string& key) const{
-        return Json();
+    static void dump(double value, string& out){
+        if(isfinite(value)){
+            char buf[32];
+            snprintf(buf, sizeof buf, "%g", value);
+            out += buf;
+        }
+        else{
+            out += "null";
+        }
     }
 
-    bool JsonValue::bool_value() const{
-        return false;
-    }
-    
-    int JsonValue::int_value() const{
-        return 0;
-    }
-    
-    double JsonValue::double_value() const{
-        return 0.0;
-    }
-    
-    const std::string& JsonValue::string_value() const{
-        return "";
-    }
-    
-    const Json::array& JsonValue::array_value() const{
-        return {};
+    static void dump(int value, string& out){
+        char buf[32];
+        snprintf(buf, sizeof buf, "%d", value);
+        out += buf;
     }
 
-    const Json::object& JsonValue::object_value() const{
-        return {};
+    static void dump(bool value, string& out){
+        out += value ? "true" : "false";
+    }
+
+    static void dump(const string& value, string& out){
+        out += '"';
+        for (size_t i = 0; i < value.length(); i++) {
+            const char ch = value[i];
+            if (ch == '\\') {
+                out += "\\\\";
+            } else if (ch == '"') {
+                out += "\\\"";
+            } else if (ch == '\b') {
+                out += "\\b";
+            } else if (ch == '\f') {
+                out += "\\f";
+            } else if (ch == '\n') {
+                out += "\\n";
+            } else if (ch == '\r') {
+                out += "\\r";
+            } else if (ch == '\t') {
+                out += "\\t";
+            } else if (static_cast<uint8_t>(ch) <= 0x1f) {
+                char buf[8];
+                snprintf(buf, sizeof buf, "\\u%04x", ch);
+                out += buf;
+            } else if (static_cast<uint8_t>(ch) == 0xe2 && static_cast<uint8_t>(value[i+1]) == 0x80
+                    && static_cast<uint8_t>(value[i+2]) == 0xa8) {
+                out += "\\u2028";
+                i += 2;
+            } else if (static_cast<uint8_t>(ch) == 0xe2 && static_cast<uint8_t>(value[i+1]) == 0x80
+                    && static_cast<uint8_t>(value[i+2]) == 0xa9) {
+                out += "\\u2029";
+                i += 2;
+            } else {
+                out += ch;
+            }
+        }
+        out += '"';
+    }
+
+    static void dump(const Json::array& values, string& out){
+        bool first = true;
+        out += "[";
+        for (const auto &value : values) {
+            if (!first)
+                out += ", ";
+            value.dump(out);
+            first = false;
+        }
+        out += "]";
+    }
+
+    static void dump(const Json::object& values, string& out){
+        bool first = true;
+        out += "{";
+        for (const auto &kv : values) {
+            if (!first)
+                out += ", ";
+            dump(kv.first, out);
+            out += ": ";
+            kv.second.dump(out);
+            first = false;
+        }
+        out += "}";
     }
 
     template<JsonType tag, typename T>
@@ -45,15 +107,11 @@ namespace SparkJson
 
         const size_t size() const override { return 1; }
         const JsonType type() const override { return tag; }
-      
+        void dump(string& out) const override { SparkJson::dump(_value, out); }
+
         const T _value;
     };
 
-    struct Null{
-        bool operator==(Null&) const { return true; }
-        bool operator<(Null&) const { return false; }
-    };
-    
     class JsonNull : public Value<JSON_NULL, Null>{
       public:
         JsonNull() : Value({}) {}
@@ -101,6 +159,27 @@ namespace SparkJson
         const size_t size() const override{ return _value.size(); }
     };
 
+    struct Statics {
+        const std::shared_ptr<JsonValue> null = make_shared<JsonNull>();
+        const std::shared_ptr<JsonValue> t = make_shared<JsonBoolean>(true);
+        const std::shared_ptr<JsonValue> f = make_shared<JsonBoolean>(false);
+        const string empty_string;
+        const vector<Json> empty_vector;
+        const map<string, Json> empty_map;
+        Statics() {}
+    };
+
+    static const Statics & statics() {
+        static const Statics s {};
+        return s;
+    }
+
+    static const Json & static_null() {
+        // This has to be separate, not in Statics, because Json() accesses statics().null.
+        static const Json json_null;
+        return json_null;
+    }  
+
     Json::Json() : _value(make_shared<JsonNull>()){}
     Json::Json(nullptr_t) : _value(make_shared<JsonNull>()){}
     Json::Json(bool value) : _value(make_shared<JsonBoolean>(value)){}
@@ -109,12 +188,46 @@ namespace SparkJson
     Json::Json(const string& value) : _value(make_shared<JsonString>(value)){}
     Json::Json(const char* value) : _value(make_shared<JsonString>(value)){}
     Json::Json(const Json::array& value) : _value(make_shared<JsonArray>(value)){}
+    Json::Json(Json::array&& value) : _value(make_shared<JsonArray>(move(value))){}
     Json::Json(const Json::object& value) : _value(make_shared<JsonObject>(value)){}
+    Json::Json(Json::object&& value) : _value(make_shared<JsonObject>(move(value))){}
     /*Json::Json(const Json& json) : _value(json._value), _errorCode(json._errorCode){
         if(json.type() == JsonType::JSON_STRING){
             std::cout << json.to_string() << std::endl;
         }
     }*/
+
+    const Json& JsonValue::operator[](size_t i) const{
+        return static_null();
+    }
+
+    const Json& JsonValue::operator[](const string& key) const{
+        return static_null();
+    }
+
+    bool JsonValue::bool_value() const{
+        return false;
+    }
+    
+    int JsonValue::int_value() const{
+        return 0;
+    }
+    
+    double JsonValue::double_value() const{
+        return 0.0;
+    }
+    
+    const std::string& JsonValue::string_value() const{
+        return statics().empty_string;
+    }
+    
+    const Json::array& JsonValue::array_value() const{
+        return statics().empty_vector;
+    }
+
+    const Json::object& JsonValue::object_value() const{
+        return statics().empty_map;
+    }
 
     size_t Json::size() const{
         return _value->size();
@@ -124,13 +237,17 @@ namespace SparkJson
         return _value->type();
     }
 
+    void Json::dump(string& out) const{
+        _value->dump(out);
+    }
+
     const Json& JsonArray::operator[](size_t i) const{
-        if(i >= _value.size()) return Json();
+        if(i >= _value.size()) return static_null();
         return _value[i];
     }
 
     const Json& JsonObject::operator[](const string& key) const{
-        if(_value.count(key) == 0) return Json();
+        if(_value.count(key) == 0) return static_null();
         return _value.find(key)->second;
     }
 

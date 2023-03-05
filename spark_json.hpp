@@ -52,11 +52,19 @@ namespace SparkJson
         Json(const std::string& value);   // string
         Json(const char* value);    // string
         Json(const array& value);   // array
+        Json(array&& value);        // array
         Json(const object& value);  // object
+        Json(object&& value);       // object
         //Json(const Json& json);
         //Json(Json&& json);
 
         static Json parse(const std::string& str);
+        void dump(std::string& out) const;
+        const std::string dump() const{
+            std::string out;
+            dump(out);
+            return out;
+        }
 
         void setErrorCode(int code) { _errorCode = code; }
         int getErrorCode() const { return _errorCode; }
@@ -85,6 +93,7 @@ namespace SparkJson
         friend class Json;
         virtual const size_t size() const = 0;
         virtual const JsonType type() const = 0;
+        virtual void dump(std::string& out) const = 0;
         virtual bool bool_value() const;
         virtual int int_value() const;
         virtual double double_value() const;
