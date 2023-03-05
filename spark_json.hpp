@@ -58,20 +58,39 @@ namespace SparkJson
 
         static Json parse(const std::string& str);
 
-        static int getErrorCode() { return _error_code; }
+        void setErrorCode(int code) { _errorCode = code; }
+        int getErrorCode() const { return _errorCode; }
 
-        size_t size() const { return _value->size(); }
-        JsonType type() const { return _value->type(); }
-        
+        size_t size() const;
+        JsonType type() const;
+
+        // 访问内部原始数据
+        bool to_bool() const;
+        int to_int() const;
+        double to_double() const;
+        const std::string& to_string() const;
+        const array& to_array() const;
+        const object& to_object() const;
+
+        const Json& operator[](size_t i) const;
+        const Json& operator[](const std::string& key) const;
+
       private:
         std::shared_ptr<JsonValue> _value;
-        static int _error_code;
+        int _errorCode = 0;
     };
 
     class JsonValue{
-    public:
-        virtual size_t size() = 0;
-        virtual JsonType type() const = 0;
+      protected:
+        friend class Json;
+        virtual const size_t size() const = 0;
+        virtual const JsonType type() const = 0;
+        virtual bool bool_value() const;
+        virtual int int_value() const;
+        virtual double double_value() const;
+        virtual const std::string& string_value() const;
+        virtual const Json::array& array_value() const;
+        virtual const Json::object& object_value() const;
         virtual const Json& operator[](size_t i) const;
         virtual const Json& operator[](const std::string& key) const;
     };
