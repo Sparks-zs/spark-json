@@ -1,4 +1,4 @@
-#include "spark_json.hpp"
+#include "spark_json.h"
 #include <assert.h>
 #include <cmath>
 
