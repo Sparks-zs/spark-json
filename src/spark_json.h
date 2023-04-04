@@ -49,6 +49,8 @@ namespace SparkJson
         Json(bool value);   // true/false
         Json(int value);    // number
         Json(double value); // number
+        Json(int64_t value);
+        Json(uint64_t value);
         Json(const std::string& value);   // string
         Json(const char* value);    // string
         Json(const array& value);   // array
@@ -75,6 +77,8 @@ namespace SparkJson
         // 访问内部原始数据
         bool to_bool() const;
         int to_int() const;
+        int64_t to_int64_t() const;
+        uint64_t to_uint64_t() const;
         double to_double() const;
         const std::string& to_string() const;
         const array& to_array() const;
@@ -82,6 +86,7 @@ namespace SparkJson
 
         const Json& operator[](size_t i) const;
         const Json& operator[](const std::string& key) const;
+        
 
       private:
         std::shared_ptr<JsonValue> _value;
@@ -96,6 +101,8 @@ namespace SparkJson
         virtual void dump(std::string& out) const = 0;
         virtual bool bool_value() const;
         virtual int int_value() const;
+        virtual int64_t int64_t_value() const;
+        virtual uint64_t uint64_t_value() const;
         virtual double double_value() const;
         virtual const std::string& string_value() const;
         virtual const Json::array& array_value() const;

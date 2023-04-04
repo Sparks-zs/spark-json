@@ -32,6 +32,18 @@ namespace SparkJson
         out += buf;
     }
 
+    static void dump(int64_t value, string& out){
+        char buf[64];
+        snprintf(buf, sizeof buf, "%lld", value);
+        out += buf;
+    }
+
+    static void dump(uint64_t value, string& out){
+        char buf[64];
+        snprintf(buf, sizeof buf, "%llu", value);
+        out += buf;
+    }
+
     static void dump(bool value, string& out){
         out += value ? "true" : "false";
     }
@@ -130,6 +142,20 @@ namespace SparkJson
         explicit JsonInt(int value) : Value(value){}
     };
 
+    class JsonInt64_t : public Value<JSON_NUMBER, int64_t>{
+        int int_value() const override { return _value; }
+        double double_value() const override { return _value; }
+      public:
+        explicit JsonInt64_t(int64_t value) : Value(value){}
+    };
+
+    class JsonUInt64_t : public Value<JSON_NUMBER, uint64_t>{
+        int int_value() const override { return _value; }
+        double double_value() const override { return _value; }
+      public:
+        explicit JsonUInt64_t(uint64_t value) : Value(value){}
+    }; 
+
     class JsonDouble : public Value<JSON_NUMBER, double>{
         int int_value() const override { return static_cast<int>(_value); }
         double double_value() const override { return _value; }
@@ -185,6 +211,8 @@ namespace SparkJson
     Json::Json(bool value) : _value(make_shared<JsonBoolean>(value)){}
     Json::Json(int value) : _value(make_shared<JsonInt>(value)){}
     Json::Json(double value) : _value(make_shared<JsonDouble>(value)){}
+    Json::Json(int64_t value) : _value(make_shared<JsonInt64_t>(value)){}
+    Json::Json(uint64_t value) : _value(make_shared<JsonUInt64_t>(value)){}
     Json::Json(const string& value) : _value(make_shared<JsonString>(value)){}
     Json::Json(const char* value) : _value(make_shared<JsonString>(value)){}
     Json::Json(const Json::array& value) : _value(make_shared<JsonArray>(value)){}
@@ -210,6 +238,14 @@ namespace SparkJson
     }
     
     int JsonValue::int_value() const{
+        return 0;
+    }
+
+    int64_t JsonValue::int64_t_value() const{
+        return 0;
+    }
+
+    uint64_t JsonValue::uint64_t_value() const{
         return 0;
     }
     
@@ -259,6 +295,14 @@ namespace SparkJson
         return _value->int_value();
     }
     
+    int64_t Json::to_int64_t() const{
+        return _value->int64_t_value();
+    }
+
+    uint64_t Json::to_uint64_t() const{
+        return _value->uint64_t_value();
+    }
+
     double Json::to_double() const{
         return _value->double_value();
     }
